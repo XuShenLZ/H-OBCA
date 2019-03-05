@@ -54,4 +54,3 @@ include("veloSmooth.jl")
 
 # function that clears terminal output
 clear() = run(@static is_unix() ? `clear` : `cmd /c cls`)
-
