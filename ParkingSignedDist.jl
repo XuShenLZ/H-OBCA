@@ -240,7 +240,7 @@ function ParkingSignedDist(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,fixTime,xWS,u
 	exitflag = 0
 
 	tic()
-	status = solve(m; suppress_warnings=true)
+	status = JuMP.solve(m; suppress_warnings=true)
 	time1 = toq();
 
 	if status == :Optimal
@@ -250,7 +250,7 @@ function ParkingSignedDist(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,fixTime,xWS,u
 		Feasible = 0
 		if Feasible == 0
 		    tic()
-		    status = solve(m; suppress_warnings=true)
+		    status = JuMP.solve(m; suppress_warnings=true)
 		    time2 = toq();
 
 		    if status == :Optimal

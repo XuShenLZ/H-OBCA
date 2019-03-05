@@ -98,15 +98,15 @@ if scenario == "backwards"
 	#     	[ 	[[obst1_x1;obst1_y1],[obst1_x2;obst1_y2],[obst1_x3;obst1_y4],...,[obst1_x1;obst1_y1]]    , 		[[obst2_x1;obst2_y1],[obst2_x2;obst2_y2],[obst2_x3;obst2_y4],...,[obst2_x1;obst2_y1]]     ,     ...   ]	
 	lObPlot = [   [ [-20;5], [-1.3;5], [-1.3;-5], [-20;-5], [-20;5] ]  ,
 	 	  [ [1.3;5], [20;5], [20;-5], [1.3;-5], [1.3;5] ] ,
-		  [ [-20;15], [20;15], [20;11], [-20,11], [-20;15] ]		]		#vetices given in CLOCK-WISE direction
+		  [ [-20;20], [20;20], [20;16], [-20,16], [-20;20] ]		]		#vetices given in CLOCK-WISE direction
 
     # for optimization problem
 	lOb = [   [ [-20;5], [-1.3;5], [-1.3;-5]]  , 
 	 	  [ [1.3;-5] , [1.3;5] , [20;5] ] , 
-		  [ [20;11], [-20;11]]	]		#vetices given in CLOCK-WISE direction
+		  [ [20;16], [-20;16]]	]		#vetices given in CLOCK-WISE direction
 	
 	# final state
-	xF = [ 0 1.3 pi/2 0]
+	xF = [ 0 1.3 -pi/2 0]
 	
 	# build obstacles for Hybrid A* algorithm
 	ox = Float64[]
@@ -132,7 +132,7 @@ if scenario == "backwards"
 	# obstacle 3
 	for i = -12:12
 	    push!(ox, Float64(i))
-	    push!(oy, 11.0)
+	    push!(oy, 16.0)
 	end
 
 elseif scenario == "parallel"
@@ -184,10 +184,10 @@ elseif scenario == "parallel"
 end
 
 #           [x_lower, x_upper, -y_lower,   y_upper  ]
-XYbounds =  [ -15   , 15      ,  1      ,  10       ]
+XYbounds =  [ -15   , 15      ,  1      ,  15       ]
 
 # set initial state
-x0 = [-6  9.5   0.0    0.0]
+x0 = [-10  11.5   0.0    0.0]
 # x0 = [9  7   0.0    0.0]
 
 # call Hybrid A*

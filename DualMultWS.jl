@@ -75,7 +75,7 @@
 		end
 	end
 	tic()
-	solve(m; suppress_warnings=true)
+	JuMP.solve(m; suppress_warnings=true)
 	time = toq();
 	# print("Auxillery problem time (to warm start dual variables) = ",time," s \n")
 
