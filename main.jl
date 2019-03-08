@@ -94,46 +94,46 @@ end
 
 # build environment
 if scenario == "backwards"
-	# obstacles for backwards
-	#     	[ 	[[obst1_x1;obst1_y1],[obst1_x2;obst1_y2],[obst1_x3;obst1_y4],...,[obst1_x1;obst1_y1]]    , 		[[obst2_x1;obst2_y1],[obst2_x2;obst2_y2],[obst2_x3;obst2_y4],...,[obst2_x1;obst2_y1]]     ,     ...   ]	
-	lObPlot = [   [ [-20;5], [-1.3;5], [-1.3;-5], [-20;-5], [-20;5] ]  ,
-	 	  [ [1.3;5], [20;5], [20;-5], [1.3;-5], [1.3;5] ] ,
-		  [ [-20;20], [20;20], [20;16], [-20,16], [-20;20] ]		]		#vetices given in CLOCK-WISE direction
+	# # obstacles for backwards
+	# #     	[ 	[[obst1_x1;obst1_y1],[obst1_x2;obst1_y2],[obst1_x3;obst1_y4],...,[obst1_x1;obst1_y1]]    , 		[[obst2_x1;obst2_y1],[obst2_x2;obst2_y2],[obst2_x3;obst2_y4],...,[obst2_x1;obst2_y1]]     ,     ...   ]	
+	# lObPlot = [   [ [-20;5], [-1.3;5], [-1.3;-5], [-20;-5], [-20;5] ]  ,
+	#  	  [ [1.3;5], [20;5], [20;-5], [1.3;-5], [1.3;5] ] ,
+	# 	  [ [-20;20], [20;20], [20;11], [-20,11], [-20;20] ]		]		#vetices given in CLOCK-WISE direction
 
-    # for optimization problem
-	lOb = [   [ [-20;5], [-1.3;5], [-1.3;-5]]  , 
-	 	  [ [1.3;-5] , [1.3;5] , [20;5] ] , 
-		  [ [20;16], [-20;16]]	]		#vetices given in CLOCK-WISE direction
+ #    # for optimization problem
+	# lOb = [   [ [-20;5], [-1.3;5], [-1.3;-5]]  , 
+	#  	  [ [1.3;-5] , [1.3;5] , [20;5] ] , 
+	# 	  [ [20;11], [-20;11]]	]		#vetices given in CLOCK-WISE direction
 	
-	# final state
-	xF = [ 0 1.3 -pi/2 0]
+	# # final state
+	# xF = [ 0 4 -pi/2 0]
 	
-	# build obstacles for Hybrid A* algorithm
-	ox = Float64[]
-	oy = Float64[]
-	# obstacle 1
-	for i = -12:0.1:-1.3
-	    push!(ox, Float64(i))
-	    push!(oy, 5.0)
-	end
-	for i in -2:5
-	    push!(ox, -1.3)
-	    push!(oy, Float64(i))
-	end
-	# obstacle 2
-	for i in -2:5
-	    push!(ox, 1.3)
-	    push!(oy, Float64(i))
-	end
-	for i = 1.3:0.1:12
-	    push!(ox, Float64(i))
-	    push!(oy, 5.0)
-	end
-	# obstacle 3
-	for i = -12:12
-	    push!(ox, Float64(i))
-	    push!(oy, 16.0)
-	end
+	# # build obstacles for Hybrid A* algorithm
+	# ox = Float64[]
+	# oy = Float64[]
+	# # obstacle 1
+	# for i = -12:0.1:-1.3
+	#     push!(ox, Float64(i))
+	#     push!(oy, 5.0)
+	# end
+	# for i in -2:5
+	#     push!(ox, -1.3)
+	#     push!(oy, Float64(i))
+	# end
+	# # obstacle 2
+	# for i in -2:5
+	#     push!(ox, 1.3)
+	#     push!(oy, Float64(i))
+	# end
+	# for i = 1.3:0.1:12
+	#     push!(ox, Float64(i))
+	#     push!(oy, 5.0)
+	# end
+	# # obstacle 3
+	# for i = -12:12
+	#     push!(ox, Float64(i))
+	#     push!(oy, 11.0)
+	# end
 
 elseif scenario == "parallel"
 	# obstacles for backwards
@@ -183,11 +183,11 @@ elseif scenario == "parallel"
 	end
 end
 
-#           [x_lower, x_upper, -y_lower,   y_upper  ]
-XYbounds =  [ -15   , 15      ,  1      ,  15       ]
+#           [x_lower, x_upper, y_lower,   y_upper  ]
+XYbounds =  [ -10   , 10      ,  -10      ,  10       ]
 
 # set initial state
-x0 = [-10  11.5   0.0    0.0]
+# x0 = [-6  6.5   0.0    0.0]
 # x0 = [9  7   0.0    0.0]
 
 # call Hybrid A*
@@ -208,7 +208,8 @@ end
 ### Smoothen velocity 0.3 m/s^2 max acceleration ###
 v,a = veloSmooth(rv,0.3,Ts/sampleN)
 ### compute steering angle ###
-delta = atan(diff(ryaw)*L/motionStep.*sign(v[1:end-1]));
+# delta = atan(diff(ryaw)*L/motionStep.*sign(v[1:end-1]));
+delta = atan.(diff(ryaw)*L/motionStep.*sign.(v[1:end-1]));
 
 ### Down-sample for Warmstart ##########
 rx_sampled = rx[1:sampleN:end]
@@ -229,6 +230,7 @@ AOb, bOb = obstHrep(nOb, vOb, lOb) 	# obtain H-representation of obstacles
 xp10, up10, scaleTime10, exitflag10, time10, lp10, np10 = ParkingSignedDist(x0,xF,N,Ts,L,ego,XYbounds,nOb,vObMPC,AOb,bOb,fixTime,xWS,uWS)
 
 ### plot H-OBCA solution ###
+ion() # Turn on the interactive plotting mode
 if exitflag10==1
 	println("H-OBCA successfully completed.")
 	figure(1)
@@ -262,4 +264,6 @@ println("Total run time: " , totTime, " s")
 println("  Hybrid A* time: ", timeHybAstar, " s")
 println("  optimization (OBCA) time: ", time10, " s")
 
-show()
+# Maintain the plot that it will not be destroyed immediately
+show(block = true)
+
