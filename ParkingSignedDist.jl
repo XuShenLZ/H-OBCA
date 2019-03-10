@@ -218,7 +218,7 @@ function ParkingSignedDist(x0,xF,N,Ts,L,ego,XYbounds,nOb,vOb, A, b,fixTime,xWS,u
 	setvalue(x,xWS')
 	setvalue(u,uWS[1:N,:]')
 
-	lWS,nWS = DualMultWS(N,nOb,vOb, A, b,xWS[:,1],xWS[:,2],xWS[:,3])
+	lWS,nWS = DualMultWS(N,nOb,vOb, A, b,xWS[:,1],xWS[:,2],xWS[:,3], ego)
 
 	setvalue(l,lWS')
 	setvalue(n,nWS')

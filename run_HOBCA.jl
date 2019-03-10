@@ -1,6 +1,13 @@
+#!/usr/bin/env julia
+
+println("Starting H-OBCA Node")
 # ##########################################
 # Run the julia code as described in the doc
-# include("setup.jl")
+println("Setup process started")
+
+include("setup.jl")
+
+println("Setup finished")
 # ##########################################
 
 # ##########################################
@@ -138,35 +145,104 @@ xF_psi = Dict(["U","F"]=> pi/2,
 xF_v   = 0
 
 # ##########################################
-# Parameter selection
+# Parameter selection and solving
+
+println("solving trajectories...")
+
+# Initialize dictionaries
+path = Dict()
+input = Dict()
+dt = Dict()
 
 # Make the choice HERE
-Start_lane = "L"
-End_spot = "L"
-End_pose = "F"
 
-# Obstacles for plotting
-lObPlot = spot_plot[End_spot]
+# Lower lane or upper lane
+for Start_lane in ["L", "U"]
+	# Lower spot or upper spot
+	for End_spot in ["L", "U"]
+		# Forward parking or reverse
+		for End_pose in ["F", "R"]
+			println("New iteration...")
+			println("Start_lane: ", Start_lane)
+			println("End_spot: ", End_spot)
+			println("End_pose: ", End_pose)
 
-# Obstacles for optimization
-lOb = spot_opt[End_spot]
+			# Obstacles for plotting
+			lObPlot = spot_plot[End_spot]
 
-# Obstacles for Hybrid A*
-ox, oy = obs_hybAstar(End_spot, l_map, w_lane, w_spot, l_spot)
+			# Obstacles for optimization
+			lOb = spot_opt[End_spot]
 
-# Lane width
-w_lane = 3
+			# Obstacles for Hybrid A*
+			ox, oy = obs_hybAstar(End_spot, l_map, w_lane, w_spot, l_spot)
 
-# Spot width
-w_spot = 1.3
-l_spot = 10
+			# Starting position
+			x0 = [x0_x x0_y[Start_lane] x0_psi x0_v]
 
-# Starting position
-x0 = [x0_x x0_y[Start_lane] x0_psi x0_v]
+			# End position
+			xF = [xF_x xF_y[[End_spot,End_pose]] xF_psi[[End_spot,End_pose]] xF_v]
 
-# End position
-xF = [xF_x xF_y[[End_spot,End_pose]] xF_psi[[End_spot,End_pose]] xF_v]
+			# ##########################################
+			# Call the main.jl for solving
+
+			xp10, up10, scaleTime10 = main(lObPlot, lOb, ox, oy, x0, xF)
+
+			# Assign values
+			path[[Start_lane, End_spot, End_pose]] = xp10
+			input[[Start_lane, End_spot, End_pose]] = up10
+			dt[[Start_lane, End_spot, End_pose]] = scaleTime10
+		    
+		end
+	    
+	end
+    
+end
+
+println("All maneuvers are solved!")
 
 # ##########################################
-# Call the main.jl for solving
-include("main.jl")
+# Ros interface
+using RobotOS
+@rosimport parking.srv: maneuver
+@rosimport parking.msg: car_state, car_input
+rostypegen()
+using parking.srv
+using parking.msg
+
+# ##########################################
+# ROS server
+
+function handle_request(req)
+    println("Request:", req)
+    # The same order as 'parking->maneuver.srv'
+    request = [req.Start_lane, req.End_spot, req.End_pose]
+    # Check whether the request is valid
+    succeed = haskey(path, request)
+
+	state_val = car_state()
+	input_val = car_input()
+    if succeed
+    	state_val.x   = path[request][1, :]
+    	state_val.y   = path[request][2, :]
+    	state_val.psi = path[request][3, :]
+    	state_val.v   = path[request][4, :]
+    	input_val.delta = input[request][1, :]
+    	input_val.acc   = input[request][2, :]
+		respond = [succeed, state_val, input_val, dt[request]]
+    else
+    	respond = [succeed, state_val, input_val, [0]]
+    end
+    println("returning value...")
+	return respond
+end
+
+function ros_server()
+	# Initialize the server
+    init_node("HOBCA_maneuver_server")
+    s = Service{maneuver}("park_maneuver", handle_request)
+    println("H-OBCA is ready to send maneuver")
+    spin()
+
+end
+
+ros_server()

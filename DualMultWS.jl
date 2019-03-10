@@ -27,7 +27,7 @@
 # DualMultWS.jl: computes warm starting points for dual multipliers lambda and mu
 ###############
 # 
-	function DualMultWS(N,nOb,vOb, A, b,rx,ry,ryaw)
+	function DualMultWS(N,nOb,vOb, A, b,rx,ry,ryaw, ego)
 
 	x = zeros(3,N+1)
 	x[1,:] = rx
