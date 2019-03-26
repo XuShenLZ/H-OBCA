@@ -20,7 +20,7 @@ l_map = 10
 w_lane = 3
 
 # Spot width
-w_spot = 1.3
+w_spot = 1.5
 l_spot = 5
 
 # Obstacles
