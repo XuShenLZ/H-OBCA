@@ -1,204 +1,249 @@
 #!/usr/bin/env julia
 
 println("Starting H-OBCA Node")
-# ##########################################
-# Run the julia code as described in the doc
-println("Setup process started")
-
-include("setup.jl")
-
-println("Setup finished")
+# Pkg for saving and loading data from file
+using JLD
 # ##########################################
 
-# ##########################################
-# Map Parameters
+# Ask whether to solve the trajectories from scratch 
+# or load it from files
+is_solve = true
 
-# The length of the map
-l_map = 10
+while true
+    println("Solve the trajectories (y) or load from file (n)?: ")
+    input = readline()
 
-# Lane width
-w_lane = 3
-
-# Spot width
-w_spot = 1.3
-l_spot = 5
-
-# Obstacles
-# Vertices are given CLOCK-WISE
-spot_plot = Dict(
-	# The lower parking position
-	"L"=>
-	[ 
-	[ [-l_map;-w_lane], [-w_spot;-w_lane], [-w_spot;-w_lane-l_spot], [-l_map;-w_lane-l_spot], [-l_map;-w_lane] ],
-	[ [w_spot;-w_lane], [l_map;  -w_lane], [l_map;  -w_lane-l_spot], [w_spot;-w_lane-l_spot], [w_spot;-w_lane] ],
-	[ [-l_map;w_lane+l_spot], [l_map;w_lane+l_spot], [l_map;w_lane], [-l_map;w_lane], [-l_map;w_lane+l_spot] ] ]
-	,
-	# The upper parking position
-	"U"=>
-	[
-	[ [-l_map; w_lane+l_spot], [-w_spot; w_lane+l_spot], [-w_spot; w_lane], [-l_map; w_lane], [-l_map; w_lane+l_spot] ],
-	[ [ w_spot; w_lane+l_spot], [ l_map; w_lane+l_spot], [l_map; w_lane], [ w_spot; w_lane], [ w_spot; w_lane+l_spot] ],
-	[ [-l_map;-w_lane], [l_map;-w_lane], [l_map;-w_lane-l_spot], [-l_map;-w_lane-l_spot], [-l_map;-w_lane] ] ]
-)
-
-# Vertices are given CLOCK-WISE
-spot_opt = Dict(
-	# The lower parking position
-	"L"=>
-	[ 
-	[ [-l_map;-w_lane], [-w_spot;-w_lane], [-w_spot;-w_lane-l_spot] ],
-	[ [w_spot;-w_lane-l_spot], [w_spot;-w_lane], [l_map;  -w_lane]  ],
-	[ [l_map;w_lane], [-l_map;w_lane] ] ]
-	,
-	"U"=>
-	[ 
-	[ [-w_spot; w_lane+l_spot], [-w_spot; w_lane],[-l_map; w_lane]  ], 
-	[ [l_map;   w_lane], [w_spot; w_lane], [w_spot; w_lane+l_spot]  ],
-	[ [-l_map;-w_lane], [l_map;-w_lane] ] ]
-)
-
-# The function to build obstacle representation for Hybrid A*
-function obs_hybAstar(spot_pos, l_map, w_lane, w_spot, l_spot)
-
-	ox = Float64[]
-	oy = Float64[]
-
-	if spot_pos == "L"
-		# obstacle 1
-		for i = -l_map:0.1:-w_spot
-		    push!(ox, Float64(i))
-		    push!(oy, -w_lane)
-		end
-		for i in -2-w_lane-l_spot:-w_lane
-		    push!(ox, -w_spot)
-		    push!(oy, Float64(i))
-		end
-		# obstacle 2
-		for i in -2-w_lane-l_spot:-w_lane
-		    push!(ox, w_spot)
-		    push!(oy, Float64(i))
-		end
-		for i = w_spot:0.1:l_map
-		    push!(ox, Float64(i))
-		    push!(oy, -w_lane)
-		end
-		# obstacle 3
-		for i = -l_map:l_map
-		    push!(ox, Float64(i))
-		    push!(oy, w_lane)
-		end
-
-	elseif spot_pos == "U"
-	    # obstacle 1
-		for i = -l_map:0.1:-w_spot
-		    push!(ox, Float64(i))
-		    push!(oy, w_lane)
-		end
-		for i in w_lane:2+w_lane+l_spot
-		    push!(ox, -w_spot)
-		    push!(oy, Float64(i))
-		end
-		# obstacle 2
-		for i in w_lane:2+w_lane+l_spot
-		    push!(ox, w_spot)
-		    push!(oy, Float64(i))
-		end
-		for i = w_spot:0.1:l_map
-		    push!(ox, Float64(i))
-		    push!(oy, w_lane)
-		end
-		# obstacle 3
-		for i = -l_map:l_map
-		    push!(ox, Float64(i))
-		    push!(oy, -w_lane)
-		end
+    if input == "y"
+    	is_solve = true
+    	break
+	elseif input == "n"
+		is_solve = false
+		break
 	else
-		println("The target spot is not correctly specified")
+		println("Invalid Input.")
 	end
 
-	return ox, oy
-    
 end
 
-# Start position
-x0_x   = -6
-# Y position is a dictionary
-# Upper and lower Spot
-x0_y   = Dict("U"=>w_lane/2, "L"=>-w_lane/2)
-x0_psi = 0
-x0_v   = 0
+# ###########################################
+# If we need to solve the trajectories
+if is_solve
+	# Run the julia code as described in the doc
+	println("Setup Started...")
 
-# End position
-xF_x   = 0
-# Y position is a dictionary
-# Upper and lower Spot
-# Forward and reverse parking
-xF_y   = Dict(["U","F"]=> w_lane+1,
-			  ["U","R"]=> w_lane+l_spot-1,
-			  ["L","F"]=>-w_lane-1,
-			  ["L","R"]=>-w_lane-l_spot+1)
+	include("setup.jl")
 
-xF_psi = Dict(["U","F"]=> pi/2,
-			  ["U","R"]=>-pi/2,
-			  ["L","F"]=>-pi/2,
-			  ["L","R"]=> pi/2)
-xF_v   = 0
+	println("Setup finished.")
+	# ##########################################
 
-# ##########################################
-# Parameter selection and solving
+	# ##########################################
+	# Map Parameters
 
-println("solving trajectories...")
+	# The length of the map
+	l_map = 10
 
-# Initialize dictionaries
-path = Dict()
-input = Dict()
-dt = Dict()
+	# Lane width
+	w_lane = 3
 
-# Make the choice HERE
+	# Spot width
+	w_spot = 1.3
+	l_spot = 5
 
-# Lower lane or upper lane
-for Start_lane in ["L", "U"]
-	# Lower spot or upper spot
-	for End_spot in ["L", "U"]
-		# Forward parking or reverse
-		for End_pose in ["F", "R"]
-			println("New iteration...")
-			println("Start_lane: ", Start_lane)
-			println("End_spot: ", End_spot)
-			println("End_pose: ", End_pose)
+	# Obstacles
+	# Vertices are given CLOCK-WISE
+	spot_plot = Dict(
+		# The lower parking position
+		"L"=>
+		[ 
+		[ [-l_map;-w_lane], [-w_spot;-w_lane], [-w_spot;-w_lane-l_spot], [-l_map;-w_lane-l_spot], [-l_map;-w_lane] ],
+		[ [w_spot;-w_lane], [l_map;  -w_lane], [l_map;  -w_lane-l_spot], [w_spot;-w_lane-l_spot], [w_spot;-w_lane] ],
+		[ [-l_map;w_lane+l_spot], [l_map;w_lane+l_spot], [l_map;w_lane], [-l_map;w_lane], [-l_map;w_lane+l_spot] ] ]
+		,
+		# The upper parking position
+		"U"=>
+		[
+		[ [-l_map; w_lane+l_spot], [-w_spot; w_lane+l_spot], [-w_spot; w_lane], [-l_map; w_lane], [-l_map; w_lane+l_spot] ],
+		[ [ w_spot; w_lane+l_spot], [ l_map; w_lane+l_spot], [l_map; w_lane], [ w_spot; w_lane], [ w_spot; w_lane+l_spot] ],
+		[ [-l_map;-w_lane], [l_map;-w_lane], [l_map;-w_lane-l_spot], [-l_map;-w_lane-l_spot], [-l_map;-w_lane] ] ]
+	)
 
-			# Obstacles for plotting
-			lObPlot = spot_plot[End_spot]
+	# Vertices are given CLOCK-WISE
+	spot_opt = Dict(
+		# The lower parking position
+		"L"=>
+		[ 
+		[ [-l_map;-w_lane], [-w_spot;-w_lane], [-w_spot;-w_lane-l_spot] ],
+		[ [w_spot;-w_lane-l_spot], [w_spot;-w_lane], [l_map;  -w_lane]  ],
+		[ [l_map;w_lane], [-l_map;w_lane] ] ]
+		,
+		"U"=>
+		[ 
+		[ [-w_spot; w_lane+l_spot], [-w_spot; w_lane],[-l_map; w_lane]  ], 
+		[ [l_map;   w_lane], [w_spot; w_lane], [w_spot; w_lane+l_spot]  ],
+		[ [-l_map;-w_lane], [l_map;-w_lane] ] ]
+	)
 
-			# Obstacles for optimization
-			lOb = spot_opt[End_spot]
+	# The function to build obstacle representation for Hybrid A*
+	function obs_hybAstar(spot_pos, l_map, w_lane, w_spot, l_spot)
 
-			# Obstacles for Hybrid A*
-			ox, oy = obs_hybAstar(End_spot, l_map, w_lane, w_spot, l_spot)
+		ox = Float64[]
+		oy = Float64[]
 
-			# Starting position
-			x0 = [x0_x x0_y[Start_lane] x0_psi x0_v]
+		if spot_pos == "L"
+			# obstacle 1
+			for i = -l_map:0.1:-w_spot
+			    push!(ox, Float64(i))
+			    push!(oy, -w_lane)
+			end
+			for i in -2-w_lane-l_spot:-w_lane
+			    push!(ox, -w_spot)
+			    push!(oy, Float64(i))
+			end
+			# obstacle 2
+			for i in -2-w_lane-l_spot:-w_lane
+			    push!(ox, w_spot)
+			    push!(oy, Float64(i))
+			end
+			for i = w_spot:0.1:l_map
+			    push!(ox, Float64(i))
+			    push!(oy, -w_lane)
+			end
+			# obstacle 3
+			for i = -l_map:l_map
+			    push!(ox, Float64(i))
+			    push!(oy, w_lane)
+			end
 
-			# End position
-			xF = [xF_x xF_y[[End_spot,End_pose]] xF_psi[[End_spot,End_pose]] xF_v]
+		elseif spot_pos == "U"
+		    # obstacle 1
+			for i = -l_map:0.1:-w_spot
+			    push!(ox, Float64(i))
+			    push!(oy, w_lane)
+			end
+			for i in w_lane:2+w_lane+l_spot
+			    push!(ox, -w_spot)
+			    push!(oy, Float64(i))
+			end
+			# obstacle 2
+			for i in w_lane:2+w_lane+l_spot
+			    push!(ox, w_spot)
+			    push!(oy, Float64(i))
+			end
+			for i = w_spot:0.1:l_map
+			    push!(ox, Float64(i))
+			    push!(oy, w_lane)
+			end
+			# obstacle 3
+			for i = -l_map:l_map
+			    push!(ox, Float64(i))
+			    push!(oy, -w_lane)
+			end
+		else
+			println("The target spot is not correctly specified")
+		end
 
-			# ##########################################
-			# Call the main.jl for solving
+		return ox, oy
+	    
+	end
 
-			xp10, up10, scaleTime10 = main(lObPlot, lOb, ox, oy, x0, xF)
+	# Start position
+	x0_x   = -6
+	# Y position is a dictionary
+	# Upper and lower Spot
+	x0_y   = Dict("U"=>w_lane/2, "L"=>-w_lane/2)
+	x0_psi = 0
+	x0_v   = 0
 
-			# Assign values
-			path[[Start_lane, End_spot, End_pose]] = xp10
-			input[[Start_lane, End_spot, End_pose]] = up10
-			dt[[Start_lane, End_spot, End_pose]] = scaleTime10
+	# End position
+	xF_x   = 0
+	# Y position is a dictionary
+	# Upper and lower Spot
+	# Forward and reverse parking
+	xF_y   = Dict(["U","F"]=> w_lane+1,
+				  ["U","R"]=> w_lane+l_spot-1,
+				  ["L","F"]=>-w_lane-1,
+				  ["L","R"]=>-w_lane-l_spot+1)
+
+	xF_psi = Dict(["U","F"]=> pi/2,
+				  ["U","R"]=>-pi/2,
+				  ["L","F"]=>-pi/2,
+				  ["L","R"]=> pi/2)
+	xF_v   = 0
+
+	# ##########################################
+	# Parameter selection and solving
+
+	println("solving trajectories...")
+
+	# Initialize dictionaries
+	path = Dict()
+	input = Dict()
+	dt = Dict()
+
+	# Make the choice HERE
+
+	# Lower lane or upper lane
+	for Start_lane in ["L", "U"]
+		# Lower spot or upper spot
+		for End_spot in ["L", "U"]
+			# Forward parking or reverse
+			for End_pose in ["F", "R"]
+				println("New iteration...")
+				println("Start_lane: ", Start_lane)
+				println("End_spot: ", End_spot)
+				println("End_pose: ", End_pose)
+
+				# Obstacles for plotting
+				lObPlot = spot_plot[End_spot]
+
+				# Obstacles for optimization
+				lOb = spot_opt[End_spot]
+
+				# Obstacles for Hybrid A*
+				ox, oy = obs_hybAstar(End_spot, l_map, w_lane, w_spot, l_spot)
+
+				# Starting position
+				x0 = [x0_x x0_y[Start_lane] x0_psi x0_v]
+
+				# End position
+				xF = [xF_x xF_y[[End_spot,End_pose]] xF_psi[[End_spot,End_pose]] xF_v]
+
+				# ##########################################
+				# Call the main.jl for solving
+
+				xp10, up10, scaleTime10 = main(lObPlot, lOb, ox, oy, x0, xF)
+
+				# Assign values
+				path[[Start_lane, End_spot, End_pose]] = xp10
+				input[[Start_lane, End_spot, End_pose]] = up10
+				dt[[Start_lane, End_spot, End_pose]] = scaleTime10
+			    
+			end
 		    
 		end
 	    
 	end
-    
+
+	println("All maneuvers are solved!")
+	# Save the variables to file, using JLD Pkg
+	save("park_data.jld", "path",path, "input",input, "dt",dt)
+
+	println("Data saved to file")
+
+# If we just load data from file
+else
+
+	println("Loading variables from file...")
+
+	# Load data from file, using JLD Pkg
+	path = load("park_data.jld", "path")
+	input = load("park_data.jld", "input")
+	dt = load("park_data.jld", "dt")
+
+	println("Successfully loaded")
+
 end
 
-println("All maneuvers are solved!")
 
 # ##########################################
 # Ros interface
@@ -230,6 +275,7 @@ function handle_request(req)
     	input_val.acc   = input[request][2, :]
 		respond = [succeed, state_val, input_val, dt[request]]
     else
+    	println("The request is invalid")
     	respond = [succeed, state_val, input_val, [0]]
     end
     println("returning value...")

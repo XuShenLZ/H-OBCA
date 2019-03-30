@@ -64,3 +64,7 @@ also need to be made in collision_check.jl
 1. this code has been tested on Julia 0.5.1 and 0.6.0, and might not run on any other Julia versions
 
 2. For best results, run code in Julia terminal
+
+### Modifications - Xu Shen:
+1. Transformed to a ROS node and made changes to the function structure
+2. Used JLD Data format for data saving and load. In Julia Environment, run Pkg.add("JLD") to install this package
