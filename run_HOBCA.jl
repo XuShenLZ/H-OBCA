@@ -1,15 +1,29 @@
 #!/usr/bin/env julia
 
 println("Starting H-OBCA Node")
+
+# ##########################################
+# Ros interface
+using RobotOS
+@rosimport parking.srv: maneuver
+@rosimport parking.msg: car_state, car_input
+rostypegen()
+using parking.srv
+using parking.msg
+
+# ##########################################
 # Pkg for saving and loading data from file
 using JLD
-# ##########################################
+data_path = get_param("HOBCA_path")
 
+# ##########################################
 # Ask whether to solve the trajectories from scratch 
 # or load it from files
-is_solve = true
+manual_choice = get_param("manual_choice")
 
-while true
+is_solve = false
+
+while manual_choice
     println("Solve the trajectories (y) or load from file (n)?: ")
     input = readline()
 
@@ -226,7 +240,7 @@ if is_solve
 
 	println("All maneuvers are solved!")
 	# Save the variables to file, using JLD Pkg
-	save("park_data.jld", "path",path, "input",input, "dt",dt)
+	save(data_path*"/park_data.jld", "path",path, "input",input, "dt",dt)
 
 	println("Data saved to file")
 
@@ -236,23 +250,14 @@ else
 	println("Loading variables from file...")
 
 	# Load data from file, using JLD Pkg
-	path = load("park_data.jld", "path")
-	input = load("park_data.jld", "input")
-	dt = load("park_data.jld", "dt")
+	path = load(data_path*"/park_data.jld", "path")
+	input = load(data_path*"/park_data.jld", "input")
+	dt = load(data_path*"/park_data.jld", "dt")
 
 	println("Successfully loaded")
 
 end
 
-
-# ##########################################
-# Ros interface
-using RobotOS
-@rosimport parking.srv: maneuver
-@rosimport parking.msg: car_state, car_input
-rostypegen()
-using parking.srv
-using parking.msg
 
 # ##########################################
 # ROS server

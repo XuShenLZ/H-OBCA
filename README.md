@@ -68,3 +68,4 @@ also need to be made in collision_check.jl
 ### Modifications - Xu Shen:
 1. Transformed to a ROS node and made changes to the function structure
 2. Used JLD Data format for data saving and load. In Julia Environment, run Pkg.add("JLD") to install this package
+3. The path of data saving and loading is specified as ROS Param
