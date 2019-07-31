@@ -14,7 +14,7 @@ using parking.msg
 # ##########################################
 # Pkg for saving and loading data from file
 using JLD
-data_path = get_param("HOBCA_path")
+data_path = homedir() * get_param("HOBCA_path")
 
 # ##########################################
 # Ask whether to solve the trajectories from scratch 
